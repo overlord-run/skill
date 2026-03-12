@@ -1,8 +1,8 @@
 # overlord skill
 
-an ai coding assistant skill for [overlord](https://overlord.run) — ai agent fleet management.
+an ai coding agent skill for [overlord](https://overlord.run) — ai agent fleet management.
 
-works with any ai coding assistant that supports skills: claude code, cursor, windsurf, codex, and more.
+works with any ai coding agent that supports skills: claude code, cursor, windsurf, codex, and more.
 
 lets your ai assistant create tasks, monitor execution, manage projects, and interact with your overlord server directly.
 
