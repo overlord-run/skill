@@ -1,0 +1,12 @@
+{
+  "name": "@overlordai/skill",
+  "version": "1.0.0",
+  "description": "claude code skill for overlord — ai task orchestration platform",
+  "keywords": ["claude-code", "skill", "overlord", "ai", "task-orchestration"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/overlord-run/skill.git"
+  },
+  "homepage": "https://overlord.run"
+}
