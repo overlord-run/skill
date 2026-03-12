@@ -1,6 +1,6 @@
 # overlord skill
 
-a [claude code](https://claude.com/claude-code) skill for [overlord](https://overlord.run) — ai task orchestration platform.
+a [claude code](https://claude.com/claude-code) skill for [overlord](https://overlord.run) — ai agent fleet management.
 
 lets claude code create tasks, monitor execution, manage projects, and interact with your overlord server directly.
 

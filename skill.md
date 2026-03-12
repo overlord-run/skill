@@ -5,7 +5,7 @@ description: interact with an overlord server to create tasks, monitor execution
 
 # overlord skill
 
-you are connected to an **overlord** server — an ai task orchestration platform that dispatches coding tasks to worker machines running ai agents (claude code, cursor, codex).
+you are connected to an **overlord** server — an ai agent fleet management platform that dispatches coding tasks to worker machines running ai agents (claude code, cursor, codex).
 
 ## configuration
 

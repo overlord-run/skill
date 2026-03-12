@@ -1,7 +1,7 @@
 {
   "name": "@overlordai/skill",
   "version": "1.0.0",
-  "description": "claude code skill for overlord — ai task orchestration platform",
+  "description": "claude code skill for overlord — ai agent fleet management",
   "keywords": ["claude-code", "skill", "overlord", "ai", "task-orchestration"],
   "license": "MIT",
   "repository": {
