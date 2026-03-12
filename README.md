@@ -1,8 +1,10 @@
 # overlord skill
 
-a [claude code](https://claude.com/claude-code) skill for [overlord](https://overlord.run) — ai agent fleet management.
+an ai coding assistant skill for [overlord](https://overlord.run) — ai agent fleet management.
 
-lets claude code create tasks, monitor execution, manage projects, and interact with your overlord server directly.
+works with any ai coding assistant that supports skills: claude code, cursor, windsurf, codex, and more.
+
+lets your ai assistant create tasks, monitor execution, manage projects, and interact with your overlord server directly.
 
 ## install
 
