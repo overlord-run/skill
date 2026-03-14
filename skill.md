@@ -1,6 +1,6 @@
 ---
 name: overlord
-description: interact with an overlord server to create tasks, monitor execution, manage projects, and control ai coding agents across your machine fleet
+description: create and monitor tasks, manage projects and workers, open remote workspaces, and search across your overlord ai agent fleet
 ---
 
 # overlord skill
@@ -29,7 +29,7 @@ Headers: { "Authorization": "Bearer ${OVERLORD_TOKEN}" }
 
 for POST/PUT/DELETE, set `Content-Type: application/json` and pass a JSON body.
 
-**response format:** all endpoints return JSON. list endpoints support `?page=1&limit=20` pagination.
+**response format:** all endpoints return JSON. list endpoints support `?limit=20&cursor=xxx` cursor-based pagination.
 
 ---
 
@@ -43,36 +43,42 @@ POST /api/web/tasks
 {
   "description": "fix the login bug on the signup page",
   "projectKey": "my-project",
-  "machineId": null
+  "workerId": null
 }
 ```
 - `description` (required) — what the ai agent should do
 - `projectKey` (required) — project key to create the task in
-- `machineId` (optional) — target a specific machine, or null for auto-routing
+- `workerId` (optional) — target a specific worker (UUID), or null for auto-routing
+- `developerId` (optional) — assign to a specific developer
 
 #### list tasks
 ```
-GET /api/web/tasks?status=running&projectKey=my-project&page=1&limit=20
+GET /api/web/tasks?status=running&projectKey=my-project&limit=20&cursor=xxx
 ```
 - `status` (optional) — filter: `queued`, `assigned`, `running`, `suspended`, `completed`, `failed`, `cancelled`
 - `projectKey` (optional) — filter by project
+- admins see all tasks; regular users see only their own
 
 #### get task details
 ```
 GET /api/web/tasks/{id}
 ```
-returns full task info including status, machine assignment, timestamps, pipeline config.
+returns full task info including status, worker assignment, agent type, timestamps, pipeline config.
 
 #### get task logs
 ```
-GET /api/web/tasks/{id}/logs
+GET /api/web/tasks/{id}/logs?limit=100&offset=0
 ```
-returns execution log lines from the task.
+- `limit` (optional) — max lines to return (max 1000)
+- `offset` (optional) — skip N lines from the start
 
 #### get task events
 ```
-GET /api/web/tasks/{id}/events
+GET /api/web/tasks/{id}/events?type=stage_change&search=deploy
 ```
+- `type` (optional) — filter by event type
+- `search` (optional) — search within events
+
 returns structured event history (status changes, stage transitions).
 
 #### cancel a task
@@ -88,10 +94,10 @@ POST /api/web/tasks/{id}/retry
 #### confirm a pipeline stage
 ```
 POST /api/web/tasks/{id}/confirm-stage
-{ "stage": 1, "result": "confirm" }
+{ "stageName": "deploy", "approved": true }
 ```
-- `stage` — stage index (0-based)
-- `result` — `"confirm"` to approve, or a string value for choice/input stages
+- `stageName` (required) — name of the stage to confirm
+- `approved` (required) — `true` to approve, `false` to reject
 
 #### get pending confirmation info
 ```
@@ -106,6 +112,7 @@ GET /api/web/tasks/{id}/pending-confirm
 ```
 GET /api/web/projects
 ```
+returns projects with metadata: task count, member count, members preview, last activity.
 
 #### get project details
 ```
@@ -117,37 +124,108 @@ GET /api/web/projects/{key}
 PUT /api/web/projects/{key}
 { "name": "new name", "repoUrl": "https://...", "sshUrl": "git@..." }
 ```
+requires maintainer role on the project.
 
 #### list project members
 ```
 GET /api/web/projects/{key}/members
 ```
+requires maintainer role.
 
 #### add a project member
 ```
 POST /api/web/projects/{key}/members
-{ "developerId": 5, "role": "developer" }
+{ "developerId": 5, "role": "member" }
 ```
-- `role` — `"maintainer"` or `"developer"`
+- `role` (optional) — `"maintainer"` or `"member"` (default: `"member"`)
 
 #### remove a project member
 ```
-DELETE /api/web/projects/{key}/members/{developerId}
+DELETE /api/web/projects/{key}/members?developerId=5
+```
+- `developerId` (query param) — the developer id to remove
+
+#### list all developers
+```
+GET /api/web/projects/-/developers
+```
+returns all developers in the system. useful when adding members to a project.
+
+#### set project git token
+```
+PUT /api/web/projects/{key}/git-token
+{ "token": "glpat-xxx" }
+```
+requires maintainer role. token is stored encrypted.
+
+#### delete project git token
+```
+DELETE /api/web/projects/{key}/git-token
 ```
 
 ---
 
-### machines
+### workers
 
-#### list machines
+#### list workers
 ```
-GET /api/web/machines
+GET /api/web/workers?status=online
+```
+- `status` (optional) — filter by worker status
+
+#### get worker details
+```
+GET /api/web/workers/{id}
+```
+worker ids are UUIDs.
+
+#### get worker tasks
+```
+GET /api/web/workers/{id}/tasks
+```
+returns tasks assigned to this worker.
+
+#### drain a worker
+```
+POST /api/web/workers/{id}/drain
+```
+prevents new task assignment. requires lead role or above.
+
+#### undrain a worker
+```
+POST /api/web/workers/{id}/undrain
+```
+restores worker to online. requires lead role or above.
+
+---
+
+### workspace tunnels
+
+remote workspace access via cursor remote tunnel.
+
+#### get workspace info
+```
+GET /api/web/workspaces/{taskId}
 ```
 
-#### get machine details
+#### start tunnel
 ```
-GET /api/web/machines/{id}
+POST /api/web/workspace-tunnel/{taskId}/start
 ```
+starts a cursor remote tunnel for the task's workspace. only task owner or admin can start.
+
+#### stop tunnel
+```
+POST /api/web/workspace-tunnel/{taskId}/stop
+```
+
+#### get tunnel status
+```
+GET /api/web/workspace-tunnel/{taskId}/status
+```
+returns current tunnel state.
+
+**tunnel states:** `IDLE` → `STARTING` → `CONNECTED` → `EXPIRED` / `CLOSING` → `CLOSED`
 
 ---
 
@@ -155,14 +233,21 @@ GET /api/web/machines/{id}
 
 #### list notifications
 ```
-GET /api/web/notifications?all=true
+GET /api/web/notifications?limit=20&cursor=xxx
 ```
-- `all` (optional) — include read notifications
+- `limit` (optional) — max results per page
+- `cursor` (optional) — pagination cursor from previous response
 
 #### mark notification as read
 ```
 POST /api/web/notifications/{id}/read
 ```
+
+#### mark all notifications as read
+```
+POST /api/web/notifications/read-all
+```
+returns count of notifications marked as read.
 
 ---
 
@@ -170,24 +255,78 @@ POST /api/web/notifications/{id}/read
 
 #### global search
 ```
-GET /api/web/search?q=login+bug
+GET /api/web/search?q=login+bug&limit=10
 ```
-returns matching tasks, projects, and machines.
+- `q` — search query
+- `limit` (optional) — max results
+
+returns matching tasks, projects, and workers.
 
 ---
 
-### status & profile
-
-#### current user
-```
-GET /api/web/profile
-```
+### dashboard
 
 #### cluster dashboard stats
 ```
 GET /api/web/dashboard/stats
 ```
 returns active/queued task counts, online workers, completed today.
+
+#### recent tasks
+```
+GET /api/web/dashboard/recent-tasks
+```
+returns recent tasks visible to the current user.
+
+#### recent activity
+```
+GET /api/web/dashboard/recent-activity
+```
+returns recent activity log across visible projects.
+
+---
+
+### profile
+
+#### get current user
+```
+GET /api/web/profile
+```
+returns name, git info, role, totp status, platform bindings.
+
+#### update profile
+```
+PUT /api/web/profile
+{ "gitName": "Jane Doe", "gitEmail": "jane@example.com" }
+```
+
+#### bind platform account
+```
+POST /api/web/profile/bind-platform
+{ "token": "bind-token-from-bot" }
+```
+links your overlord account to a chat platform (slack, lark, etc.) using a token from the bot's bind command.
+
+#### list api tokens
+```
+GET /api/web/profile/tokens
+```
+returns metadata for all personal access tokens (no secrets).
+
+#### create api token
+```
+POST /api/web/profile/tokens
+{ "label": "my-token", "expiresAt": "2025-12-31" }
+```
+- `label` (required) — token display name
+- `expiresAt` (optional) — expiration date (ISO 8601)
+
+returns the token value once — store it securely.
+
+#### revoke api token
+```
+POST /api/web/profile/tokens/{id}/revoke
+```
 
 ---
 
@@ -210,13 +349,26 @@ POST /api/web/tasks/{taskId}/pty-token
 
 | status | meaning |
 |--------|---------|
-| `queued` | waiting for a worker machine |
-| `assigned` | assigned to a machine, starting up |
+| `queued` | waiting for a worker |
+| `assigned` | assigned to a worker, starting up |
 | `running` | ai agent is executing |
 | `suspended` | paused — awaiting human confirmation or worker reconnection |
 | `completed` | finished successfully |
 | `failed` | execution failed |
 | `cancelled` | cancelled by user |
+
+## worker statuses
+
+| status | meaning |
+|--------|---------|
+| `online` | available for task assignment |
+| `offline` | disconnected |
+| `draining` | not accepting new tasks, finishing current work |
+| `decommissioned` | permanently removed |
+
+## agent types
+
+tasks can run on different ai agents: `claude`, `cursor`, `codex`, `custom`.
 
 ---
 
@@ -229,11 +381,21 @@ POST /api/web/tasks/{taskId}/pty-token
 
 ### check cluster health
 1. call `GET /api/web/dashboard/stats` for overview
-2. call `GET /api/web/machines` to see individual machine status
+2. call `GET /api/web/workers` to see individual worker status
 
 ### find a task
 1. use `GET /api/web/search?q=...` for broad search
 2. or `GET /api/web/tasks?status=running` for filtered listing
+
+### open a remote workspace
+1. call `POST /api/web/workspace-tunnel/{taskId}/start` to start the tunnel
+2. poll `GET /api/web/workspace-tunnel/{taskId}/status` until `CONNECTED`
+3. use the returned connection info to open the workspace in cursor
+4. call `POST /api/web/workspace-tunnel/{taskId}/stop` when done
+
+### manage workers
+1. call `POST /api/web/workers/{id}/drain` to stop new tasks on a worker
+2. call `POST /api/web/workers/{id}/undrain` to resume task assignment
 
 ---
 
@@ -250,3 +412,4 @@ POST /api/web/tasks/{taskId}/pty-token
 - use `--json` style: prefer structured data over rendering tables yourself
 - when creating tasks, write clear descriptions — the ai agent on the other end will execute exactly what you describe
 - for long-running tasks, poll status periodically rather than blocking
+- worker ids are UUIDs — validate format before making requests

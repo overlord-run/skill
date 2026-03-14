@@ -25,12 +25,14 @@ create a token at `{your-server}/settings/tokens`.
 
 ## what it can do
 
-- **create tasks** — describe what you want done, overlord dispatches to a worker machine
+- **create tasks** — describe what you want done, overlord dispatches to a worker
 - **monitor tasks** — check status, read logs, track progress
-- **manage projects** — list projects, view members
-- **check cluster** — see machine status, worker health
-- **search** — find tasks, projects, machines
+- **manage projects** — list projects, view members, manage git tokens
+- **manage workers** — check status, drain/undrain workers
+- **workspace tunnels** — start/stop remote workspace connections
+- **search** — find tasks, projects, workers
 - **confirm stages** — approve pipeline stages for suspended tasks
+- **profile & tokens** — manage your profile and api tokens
 
 ## learn more
 

@@ -1,6 +1,6 @@
 {
   "name": "@overlordai/skill",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "agent skill for overlord — ai agent fleet management",
   "keywords": ["skill", "overlord", "ai", "agent", "fleet-management", "claude-code", "cursor", "windsurf", "codex"],
   "license": "MIT",
